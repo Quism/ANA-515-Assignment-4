@@ -1,0 +1,75 @@
+---
+title: "ANA 515 Assignment 4"
+author: "Gyu Hyun Byun"
+date: "2022-10-15"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+library(dplyr)
+library(tidyverse)
+library(scales)
+```
+
+# 1. Discuss the business problem/goal 
+The goal is to recognize fraudulent credit card transactions so that customers are not charged for items that they did not purchase.
+
+# 2. Identify where the dataset was retrieved from
+The dataset was retrieved from https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud?resource=download
+
+# 3. Identify the code that imported and saved your dataset in R
+The dataset is saved as "creditcard_raw".
+
+```{r data, include = TRUE}
+setwd("/Users/Qram/OneDrive/Documents/McDaniel/ANA 515 Fundamentals of Data Storage/Week 8")
+creditcard_raw <- read.csv("creditcard.csv")
+```
+
+# 4. Describe your data set
+
+The original data has `r nrow(creditcard_raw)` rows and `r ncol(creditcard_raw)` columns. The names of the columns and a brief description of each are:
+
+```{r, echo = TRUE}
+names(creditcard_raw) #to show column names
+
+#Time = Number of seconds elapsed between this transaction and the first transaction in the dataset
+#V1 ~ V28 = may be result of a PCA Dimensionality reduction to protect user identities and sensitive features(V1-V28)
+#Amount = Transaction amount
+#Class = 1 for fraudulent transactions, 0 otherwise
+```
+
+# 5-8. Discuss any data preparation, missing values, errors, the modeling, and the output. Provide explanation with any visuals.
+
+The dataset contains transactions made by credit cards in September 2013 by European cardholders.
+This dataset presents transactions that occurred in two days, where we have `r sum(creditcard_raw$Class == "1")` frauds out of `r nrow(creditcard_raw)` transactions. The dataset is highly unbalanced, the positive class (frauds) account for `r percent(sum(creditcard_raw$Class == "1")/nrow(creditcard_raw), accuracy = 0.001)` of all transactions.
+
+```{r, echo = TRUE}
+sum(creditcard_raw$Class == "1") #to show the number of fraudulent transactions
+nrow(creditcard_raw) #to show the number of total transactions
+percent(sum(creditcard_raw$Class == "1")/nrow(creditcard_raw), accuracy = 0.001) #to show the % of fraudulent transactions
+```
+
+
+
+```{r, echo = TRUE}
+creditcard_fraud <- creditcard_raw[creditcard_raw$Class == "1",] #to create a subdataset for fraudulent transactions
+creditcard_nofraud <- creditcard_raw[creditcard_raw$Class == "0",] #to create a subdataset for non-fraudulent transactions
+
+summary(creditcard_fraud$Amount) #to show the summary of the Amount variable of the fraudulent subdataset
+
+summary(creditcard_nofraud$Amount) #to show the summary of the Amount variable of the non-fraudulent subdataset
+```
+
+Per the summaries above, we cannot seem to identify a notable difference in the Amount variable between the two subdataset.
+
+Let's investigate further to determine if the Amount variable can help us tell fraudulent transactions from normal transactions.
+
+```{r, echo = TRUE}
+creditcard_raw$Fraud[creditcard_raw$Class == "1"] <- "Fraudulent" #to create a new variable, Fraud, and mark it "Fraudulent" if the transaction is classified as fraudulent per the Class variable.
+creditcard_raw$Fraud[creditcard_raw$Class == "0"] <- "Non-Fraudulent" #to create a new variable, Fraud, and mark it "Non-Fraudulent" if the transaction is not classified as fraudulent per the Class variable.
+
+ggplot(creditcard_raw, aes(x = Fraud, y = Amount)) + geom_boxplot() #to draw a graph to compare the transaction amounts between the two groups.
+t.test(Amount ~ Fraud, data = creditcard_raw, var.equal = TRUE, paired = FALSE) #to perform a t-test to draw a conclusion.
+```
+
+Based on the boxplot and t-test performed above, the mean of the variable Amount is a good indicator of identifying fraudulent transactions as the p-value is only 0.002651.
